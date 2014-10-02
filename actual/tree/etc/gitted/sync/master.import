@@ -9,6 +9,3 @@
 source /etc/gitted/sync/defs
 
 GITTED_DATA_PATH=sysconf /usr/share/gitted/import/sysconf
-
-METAGITTED_BRANCH=clipperz /usr/share/gitted/import/metagitted
-#METAGITTED_BRANCH=www-geonef /usr/share/gitted/import/metagitted
