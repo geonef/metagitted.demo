@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Import script for gitted /repository.local.git, branch "master"
+#
+# This script is responsible for updating the system according to
+# the new state of the Git branch.
+#
+
+source /etc/gitted/sync/defs
+
+GITTED_DATA_PATH=sysconf /usr/share/gitted/import/sysconf
+
+METAGITTED_BRANCH=clipperz /usr/share/gitted/import/metagitted
+#METAGITTED_BRANCH=www-geonef /usr/share/gitted/import/metagitted
