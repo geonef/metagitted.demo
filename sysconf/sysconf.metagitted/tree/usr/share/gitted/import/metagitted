@@ -10,41 +10,96 @@
 # branch "$GITTED_GIT_BRANCH/{ GUEST }/master" exists.
 #
 #
+. /usr/share/gitted/import.init.bash || exit 2
 
-[ -z "$METAGITTED_EXECUTIVE_BRANCH" ] && METAGITTED_EXECUTIVE_BRANCH=master
 [ -z "$METAGITTED_CONF_PATH" ] && METAGITTED_CONF_PATH=mettagitted
-[ -z "$METAGITTED_BRANCH_PREFIX" ] && METAGITTED_BRANCH_PREFIX=guest/
 
-. /usr/share/nef-common/shell-command || exit 2
+git ls-tree $gitted_new_commit $METAGITTED_CONF_PATH/ | (
 
-# git for-each-ref  --format='%(refname)' "refs/heads/${GITTED_GIT_BRANCH}/" | cut -d/ -f4
-guests=$(git for-each-ref --format='%(refname)' "refs/heads/${METAGITTED_BRANCH_PREFIX}" | cut -d/ -f4 | uniq)
+    while read mode type uuid path; do
+        file=$(basename $path)
 
-for guest in $guests; do
-    nef_log "Processing guest: $guest"
+        if echo "$file" | grep -q '\.guest$'; then
+            (
+                METAGITTED_GUEST_NAME=$(basename $path .guest)
+                METAGITTED_GUEST_IMPORT_BRANCHES=
+                METAGITTED_GUEST_EXPORT_BRANCHES=
+                METAGITTED_GUEST_INIT_BRANCH=master
+                declare -A METAGITTED_GUEST_LOCAL
 
-    executive_treeish=$(git show-ref --hash "refs/heads/${GITTED_GIT_BRANCH}/${guest}/${METAGITTED_EXECUTIVE_BRANCH}")
+                source <(git cat-file -p $uuid)
 
-    if [ -z "$executive_treeish" ]; then
-        nef_log "  .. executive branch '$METAGITTED_EXECUTIVE_BRANCH' not present. Ignoring guest."
-    else
-        nef_log "  .. executive branch '$METAGITTED_EXECUTIVE_BRANCH' is $executive_treeish"
-        branches=$(git for-each-ref --format='%(refname)' "refs/heads/${GITTED_GIT_BRANCH}/${guest}/" \
-            | sed -r 's/^([^/]+\/){4}//')
+                nef_log "Processing guest: $METAGITTED_GUEST_NAME"
+                local_init_branch=${METAGITTED_GUEST_LOCAL[$METAGITTED_GUEST_INIT_BRANCH]}
+                if [ -z "$local_init_branch" ]; then
+                    nef_log "  .. executive branch '$METAGITTED_GUEST_INIT_BRANCH' not mapped to local branch. Ignoring guest."
+                    nef_log "     (set METAGITTED_GUEST_LOCAL[$METAGITTED_GUEST_INIT_BRANCH]=<branch-name> in ${path})"
+                else
+                    executive_treeish=$(git show-ref --hash "refs/heads/${local_init_branch}")
 
-        refspecs=
-        for branch in $branches; do
-            # echo "branch: $branch"
-            refspecs="$refspecs +${GITTED_GIT_BRANCH}/${guest}/$branch:$branch"
-        done
-        nef_log "  .. pushing ref specs: $refspecs"
+                    if [ -z "$executive_treeish" ]; then
+                        nef_log "  .. executive branch '$local_init_branch' not present. Ignoring guest."
+                    else
+                        nef_log "  .. executive branch '$local_init_branch' is $executive_treeish"
 
-        git push "ext::/usr/bin/gitted-client handle-remote-protocol --tree $executive_treeish $guest %S" $refspecs
-        [ "$?" -ne 0 ] && nef_fatal "git push failed with status $?"
-    fi
+                        branches=$(echo "$METAGITTED_GUEST_IMPORT_BRANCHES" | tr ":" " ")
+                        refspecs=
+                        for branch in $branches; do
+                            # echo "branch: $branch"
+                            local_branch=${METAGITTED_GUEST_LOCAL[$branch]}
+                            if [ -n "$local_branch" ]; then
+                                refspecs="$refspecs +$local_branch:$branch"
+                            fi
+                        done
+                        if [ -z "$refspecs" ]; then
+                            nef_log "  .. no ref to push"
+                        else
+                            nef_log "  .. pushing ref specs: $refspecs"
+                            git push "ext::/usr/bin/gitted-client handle-remote-protocol --tree $executive_treeish $METAGITTED_GUEST_NAME %S" $refspecs \
+                                || nef_fatal "git push failed with status $?"
+                        fi
+                    fi
+                fi
+            )
+        else
+            nef_log "Ignoring file: $GITTED_DATA_PATH/$file"
+        fi
+    done
+)
 
-    # lxc-ls --running "^${guest}\$"
-done
+################################################################################
+
+# [ -z "$METAGITTED_EXECUTIVE_BRANCH" ] && METAGITTED_EXECUTIVE_BRANCH=master
+# [ -z "$METAGITTED_BRANCH_PREFIX" ] && METAGITTED_BRANCH_PREFIX=guest/
+
+# guests=$(git for-each-ref --format='%(refname)' "refs/heads/${METAGITTED_BRANCH_PREFIX}" | cut -d/ -f4 | uniq)
+
+# for guest in $guests; do
+#     nef_log "Processing guest: $guest"
+#     guest_branch_prefix=${METAGITTED_BRANCH_PREFIX}${guest}/
+#     executive_treeish=$(git show-ref --hash "refs/heads/${guest_branch_prefix}${METAGITTED_EXECUTIVE_BRANCH}")
+
+#     if [ -z "$executive_treeish" ]; then
+#         nef_log "  .. executive branch '$METAGITTED_EXECUTIVE_BRANCH' not present. Ignoring guest."
+#     else
+#         nef_log "  .. executive branch '$METAGITTED_EXECUTIVE_BRANCH' is $executive_treeish"
+#         branches=$(git for-each-ref --format='%(refname)' "refs/heads/${guest_branch_prefix}" \
+#             | sed -r 's/^([^/]+\/){4}//')
+
+#         refspecs=
+#         for branch in $branches; do
+#             # echo "branch: $branch"
+#             refspecs="$refspecs +${guest_branch_prefix}$branch:$branch"
+#         done
+#         nef_log "  .. pushing ref specs: $refspecs"
+
+#         git push "ext::/usr/bin/gitted-client handle-remote-protocol --tree $executive_treeish $guest %S" $refspecs
+#         [ "$?" -ne 0 ] && nef_fatal "git push failed with status $?"
+#     fi
+
+# done
+
+################################################################################
 
 # git show-ref --heads | grep " refs/heads/${GITTED_GIT_BRANCH}/"
 # git show-refs
