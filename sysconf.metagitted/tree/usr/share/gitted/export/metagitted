@@ -1,0 +1,67 @@
+#!/bin/bash
+#
+# GITTED EXPORT: LXC container with Gitted state -> /local.repository.git <refs/$GITTED_GIT_BRANCH/*>
+#
+# For now, guest are LXC containers only.
+# In the future, it could allow other virtualization technologies.
+#
+# All "$GITTED_GIT_BRANCH/*" branches are scanned and updated with guess state.
+#
+. /usr/share/gitted/export.init.bash || exit 2
+
+
+[ -z "$METAGITTED_CONF_PATH" ] && METAGITTED_CONF_PATH=metagitted
+
+echo git ls-tree $gitted_last_commit $METAGITTED_CONF_PATH/
+git ls-tree $gitted_last_commit $METAGITTED_CONF_PATH/ | (
+
+    while read mode type uuid path; do
+        file=$(basename $path)
+
+        if echo "$file" | grep -q '\.guest$'; then
+            (
+                METAGITTED_GUEST_NAME=$(basename $path .guest)
+                METAGITTED_GUEST_IMPORT_BRANCHES=
+                METAGITTED_GUEST_EXPORT_BRANCHES=
+                METAGITTED_GUEST_INIT_BRANCH=master
+                declare -A METAGITTED_GUEST_LOCAL
+
+                source <(git cat-file -p $uuid)
+
+                nef_log "Processing guest: $METAGITTED_GUEST_NAME"
+                local_init_branch=${METAGITTED_GUEST_LOCAL[$METAGITTED_GUEST_INIT_BRANCH]}
+                if [ -z "$local_init_branch" ]; then
+                    nef_log "  .. executive branch '$METAGITTED_GUEST_INIT_BRANCH' not mapped to local branch. Ignoring guest."
+                    nef_log "     (set METAGITTED_GUEST_LOCAL[$METAGITTED_GUEST_INIT_BRANCH]=<branch-name> in ${path})"
+                else
+                    executive_treeish=$(git show-ref --hash "refs/heads/${local_init_branch}")
+
+                    if [ -z "$executive_treeish" ]; then
+                        nef_log "  .. executive branch '$local_init_branch' not present. Ignoring guest."
+                    else
+                        nef_log "  .. executive branch '$local_init_branch' is $executive_treeish"
+
+                        branches=$(echo "$METAGITTED_GUEST_EXPORT_BRANCHES" | tr ":" " ")
+                        refspecs=
+                        for branch in $branches; do
+                            # echo "branch: $branch"
+                            local_branch=${METAGITTED_GUEST_LOCAL[$branch]}
+                            if [ -n "$local_branch" ]; then
+                                refspecs="$refspecs +$branch:$local_branch"
+                            fi
+                        done
+                        if [ -z "$refspecs" ]; then
+                            nef_log "  .. no ref to fetch"
+                        else
+                            nef_log "  .. pushing ref specs: $refspecs"
+                            git fetch "ext::/usr/bin/gitted-client handle-remote-protocol --tree $executive_treeish $METAGITTED_GUEST_NAME %S" $refspecs \
+                                || nef_fatal "git fetch failed with status $?"
+                        fi
+                    fi
+                fi
+            )
+        else
+            nef_log "Ignoring file: $GITTED_DATA_PATH/$file"
+        fi
+    done
+)
