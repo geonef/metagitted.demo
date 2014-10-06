@@ -12,10 +12,13 @@
 #
 
 [ -z "$METAGITTED_EXECUTIVE_BRANCH" ] && METAGITTED_EXECUTIVE_BRANCH=master
+[ -z "$METAGITTED_CONF_PATH" ] && METAGITTED_CONF_PATH=mettagitted
+[ -z "$METAGITTED_BRANCH_PREFIX" ] && METAGITTED_BRANCH_PREFIX=guest/
+
 . /usr/share/nef-common/shell-command || exit 2
 
 # git for-each-ref  --format='%(refname)' "refs/heads/${GITTED_GIT_BRANCH}/" | cut -d/ -f4
-guests=$(git for-each-ref --format='%(refname)' "refs/heads/${GITTED_GIT_BRANCH}/" | cut -d/ -f4 | uniq)
+guests=$(git for-each-ref --format='%(refname)' "refs/heads/${METAGITTED_BRANCH_PREFIX}" | cut -d/ -f4 | uniq)
 
 for guest in $guests; do
     nef_log "Processing guest: $guest"
