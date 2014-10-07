@@ -82,18 +82,26 @@ cat /etc/metagitted/ipv4.forward.tab | grep -v '^ *#' | grep -v '^ *$' | (
             chain="$chain -d $src_ip"
             filter="$filter.* -d $src_ip"
         fi
-        chain="$chain -p $protocol --dport $dest_port -j DNAT --to $dest_ip:$dest_port"
-        filter="$filter.* -p $protocol.* --dport $dest_port"
+        chain="$chain -p $protocol --dport $src_port -j DNAT --to $dest_ip:$dest_port"
+        filter="$filter.* -p $protocol.* --dport $src_port [^ ]+"
 
         _log "filter: $filter"
+
+        # example: -A PREROUTING -i em1 -p tcp -m tcp --dport 80 -j DNAT --to-destination 10.0.3.220:80
         iptables -t nat -S PREROUTING | grep "^-A " | cat -n  >> $log
         old_rule=$(iptables -t nat -S PREROUTING | grep "^-A " | cat -n | grep -E -- "$filter" | head -n 1 | sed -r 's/^ *([0-9]+).*/\1/')
+
+        # if [ -n "$old_rule" ]; then
+        #     _log "OLD RULE NUMBER: $old_rule"
+        #     iptables -t nat -R PREROUTING $old_rule
+        # else
+        #     _log iptables -t nat -A $chain
+        #     iptables -t nat -A $chain
+        # fi
         if [ -n "$old_rule" ]; then
             _log "OLD RULE NUMBER: $old_rule"
             iptables -t nat -D PREROUTING $old_rule
         fi
-
-        # -i eth0 -p tcp -m tcp --dport 80
 
         _log iptables -t nat -A $chain
         iptables -t nat -A $chain
