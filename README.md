@@ -4,7 +4,7 @@
 In the usual case, a "gitted" system is an LXC container.
 
 The **metagitted** profile is meant to import/export the set of LXC containers.
-That is: a push-to-deploy solution for bring up new guest services (LXC containers) and update them with ```git push```.
+That is: a push-to-deploy solution for bringing up new guest services (LXC containers) and update them with ```git push```.
 
 ## How to setup
 
