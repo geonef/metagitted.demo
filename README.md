@@ -38,7 +38,28 @@ You're done! Ready to make push and pulls...
 
 ## Push & pull
 
-Suppose you want to import
+To deploy, for example, [gitted.clipperz.demo](https://github.com/geonef/gitted.clipperz.demo):
 ```
-git push metagitted master
+git fetch https://github.com/geonef/gitted.clipperz.demo.git master:demo
+git push metagitted master demo
+```
+
+When the command ends, the clipperz application should be up and running through a newly-created LXC container ```demo```.
+
+You can visit the app by opening the host IP into your web browser, since the TCP port 80 is forwarded as configured in [/etc/metagitted/ipv4.forward.tab](https://github.com/geonef/metagitted.demo/blob/master/sysconf/actual/tree/etc/metagitted/ipv4.forward.tab).
+
+After you have made changes to ClipperZ, the MySQL data will be extracted into Git commits when you make:
+```
+git fetch metagitted
+```
+
+You can merge the changes into your local ```demo``` branch by making:
+```
+git checkout demo
+git merge metagitted/demo
+```
+
+You can duplicate the application by creating a ```metagitted/demo2.guest``` file based on the [```demo.guest``` file](https://github.com/geonef/metagitted.demo/blob/master/metagitted/demo.guest), committing it and making:
+```
+git push metagitted master demo:demo2
 ```
