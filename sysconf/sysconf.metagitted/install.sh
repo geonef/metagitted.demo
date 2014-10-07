@@ -2,4 +2,4 @@
 
 . /usr/lib/sysconf.base/common.sh
 
-# sysconf_require_packages iptables-persistent
+sysconf_require_packages lxc
