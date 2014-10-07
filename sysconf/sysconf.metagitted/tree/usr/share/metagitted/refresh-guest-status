@@ -25,6 +25,11 @@ _resolve_host() {
     if [[ $_host =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
         _ip=$_host
 
+    elif [ "$_host" = "*" ]; then
+        # take network interface of default route
+        _ip=$(route -n | grep ^0.0.0.0 | sed 's/.* //')
+        _log route $_ip
+
     elif [ -d "/sys/class/net/$_host" ]; then
         _ip=$_host
 
@@ -56,10 +61,10 @@ cat /etc/metagitted/ipv4.forward.tab | grep -v '^ *#' | grep -v '^ *$' | (
         dest_host=$(echo "$dest" | cut -d: -f1)
         dest_port=$(echo "$dest" | cut -d: -f2)
 
-        if [ "$src_host" != "*" ]; then
-            src_ip=$(_resolve_host "$src_host")
-            [ $? -eq 0 ] || continue
-        fi
+        # if [ "$src_host" != "*" ]; then
+        src_ip=$(_resolve_host "$src_host")
+        [ $? -eq 0 ] || continue
+        # fi
         protocol=$(echo "$src_port" | cut -d/ -f2)
         src_port=$(echo "$src_port" | cut -d/ -f1)
 
@@ -69,10 +74,11 @@ cat /etc/metagitted/ipv4.forward.tab | grep -v '^ *#' | grep -v '^ *$' | (
 
         chain="PREROUTING"
         filter="-A PREROUTING"
-        if [ -d "/sys/class/net/$src_host" ]; then
-            chain="$chain -i $src_host"
-            filter="$filter.* -i $src_host"
-        elif [ "$src_host" != "*" ]; then
+        if [ -d "/sys/class/net/$src_ip" ]; then
+            chain="$chain -i $src_ip"
+            filter="$filter.* -i $src_ip"
+        else
+            # elif [ "$src_host" != "*" ]; then
             chain="$chain -d $src_ip"
             filter="$filter.* -d $src_ip"
         fi
