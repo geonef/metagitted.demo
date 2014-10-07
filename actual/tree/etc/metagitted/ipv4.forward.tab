@@ -1,2 +1,2 @@
 
-eth0:80/tcp demo.lxc:80
+*:80/tcp demo.lxc:80
