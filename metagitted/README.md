@@ -1,6 +1,6 @@
 # Configuration of the Metagitted system
 
-## <name>.guest
+## NAME.guest
 
 This directory contains one ```.guest``` file for each Gitted
 sub-system (LXC container).
