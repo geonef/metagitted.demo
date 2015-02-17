@@ -1,4 +1,7 @@
+# Parameters for metagitted guest 'demo'           -*- shell-script -*-
 
 METAGITTED_GUEST_IMPORT_BRANCHES=master
 METAGITTED_GUEST_EXPORT_BRANCHES=master
 METAGITTED_GUEST_LOCAL[master]=demo
+METAGITTED_GUEST_MISSING_BRANCH=stop # could be: "ignore", "stop", "destroy"
+METAGITTED_GUEST_LXC_CREATE_OPTIONS="-B lvm --vgname myvg --lvname lxc.demo --fssize 2G"
