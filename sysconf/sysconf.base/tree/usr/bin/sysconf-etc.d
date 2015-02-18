@@ -2,8 +2,6 @@
 #
 # sysconf-etc.d - update config files as defined in /etc/sysconf/meta.d
 #
-# WARNING: this script is UNFINISHED! It is more a skeleton for now.
-#
 # HISTORY
 #   20140821 first version by JF Gigand <jf@geonef.fr>
 
@@ -217,29 +215,6 @@ script_update_config() {
         nef_log -v "Content has not changed actually: $configpath"
         rm -f "$configpath.~new~"
     fi
-}
-
-# command: help [command]
-#
-# Print information about command usage.
-#
-# With no argument, a list of commands is printed.
-##
-script_command_help() {
-    local _argv=()
-    local _command=
-    local _usage=0
-
-    while [ -n "$1" ]; do
-        case "$1" in
-            --usage) _usage=1; shift ;;
-            -h|--help) script_command_help help; return ;;
-            -*) script_eval_common_option "$1"; shift ;;
-            *) _command="$1"; break ;;
-        esac
-    done
-
-    nef_show_help $_command
 }
 
 
