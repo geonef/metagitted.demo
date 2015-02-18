@@ -1,3 +1,0 @@
-
-*:80/tcp demo.lxc:80
-*:8080/tcp geoserver.lxc:8080
