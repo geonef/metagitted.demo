@@ -44,6 +44,7 @@ if [ -d $GITTED_WORKING_TREE/.git ]; then
             temp_branch=$(date +T%s)
             clone_path=/tmp/$temp_branch
             nef_log "Cloning $local_git_dir to: $clone_path[/.git]"
+            # nef_cmd --log-prefix git-clone -- git clone $local_git_dir $clone_path
             nef_cmd -- mkdir $clone_path
             nef_cmd -- cp -a $local_git_dir $clone_path/.git
             cd $clone_path
@@ -51,8 +52,18 @@ if [ -d $GITTED_WORKING_TREE/.git ]; then
             nef_cmd --log-prefix git-symbolic-ref -- git symbolic-ref HEAD refs/heads/master
             nef_cmd --log-prefix git-readtree -- git read-tree HEAD
             nef_cmd --log-prefix git-checkout-index -- git checkout-index -u -a
-            nef_log "Done cloning."
+            nef_log "Done cloning :)"
 
+            ## Method 1: subtree add/pull from working dir to tmp
+            # op=add
+            # if [ $(git ls-tree HEAD $GITTED_DATA_PATH | wc -l) -ne 0 ]; then
+            #     op=pull
+            # fi
+            # nef_log "Executing: git subtree $op -P '$GITTED_DATA_PATH' $GITTED_WORKING_TREE master"
+            # nef_cmd --log-prefix git-subtree -- git subtree $op -P $GITTED_DATA_PATH $GITTED_WORKING_TREE master \
+            #     -m "Automatic merge (git-subtree pull) by $0 on $(hostname)"
+
+            ## Method 2: fetch first then add/merge
             # commit=$(git subtree split -P $GITTED_DATA_PATH)
             # nef_log "split commit: $commit"
             # git fetch $GITTED_WORKING_TREE master
@@ -61,7 +72,8 @@ if [ -d $GITTED_WORKING_TREE/.git ]; then
             op=add
             if [ $(git ls-tree HEAD $GITTED_DATA_PATH | wc -l) -ne 0 ]; then
                 op=merge
-                nef_cmd --log-prefix git-subtree-split -- git subtree split -P $GITTED_DATA_PATH --rejoin -b $temp_branch
+                # --rejoin should avoid unresolved conflicts in some cases
+                nef_cmd --log-prefix git-subtree-split -- git subtree split -P $GITTED_DATA_PATH -b $temp_branch
             fi
             # nef_cmd --log-prefix git-fetch -- git fetch $GITTED_WORKING_TREE master
             nef_log "Executing: git fetch $GITTED_WORKING_TREE master"
@@ -69,9 +81,7 @@ if [ -d $GITTED_WORKING_TREE/.git ]; then
             nef_log "Executing: git subtree merge -P '$GITTED_DATA_PATH' FETCH_HEAD"
             nef_cmd --log-prefix git-subtree -- git subtree $op -P $GITTED_DATA_PATH FETCH_HEAD \
                 -m "Automatic merge (git-subtree add/merge) by $0 on $(hostname)"
-            # nef_log "Executing: git subtree pull -P '$GITTED_DATA_PATH' $GITTED_WORKING_TREE master"
-            # nef_cmd --log-prefix git-subtree -- git subtree pull -P $GITTED_DATA_PATH $GITTED_WORKING_TREE master \
-            #     -m "Automatic merge (git-subtree pull) by $0 on $(hostname)"
+
             nef_cmd --log-prefix git-push -- git push $local_git_dir master
             nef_log "Done pushing back the merge to: $local_git_dir <master>"
 
@@ -85,7 +95,7 @@ if [ -d $GITTED_WORKING_TREE/.git ]; then
             cd $local_git_dir
             message="update after subtree merge of: $GITTED_WORKING_TREE"
             nef_log "updating: refs/heads/$GITTED_GIT_BRANCH"
-            git update-ref -m "$message" $state_ref refs/heads/$GITTED_GIT_BRANCH $gitted_last_commit
+            git update-ref -m "$message" $state_ref refs/heads/$GITTED_GIT_BRANCH
 
         else
             nef_log "No change committed in $GITTED_WORKING_TREE in branch master"

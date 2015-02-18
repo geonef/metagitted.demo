@@ -6,7 +6,6 @@
 #   20140818 first version by JF Gigand <jf@geonef.fr>
 
 nef_command_name=gitted-client
-# . $(dirname $0)/../share/nef-common/shell-command || exit 2
 gitted_executive_treeish=
 
 ######################################################################
@@ -72,7 +71,7 @@ gitted_command_add() {
 
     local _branch_name=$(git symbolic-ref --short HEAD 2>/dev/null)
     if [ -n "$_branch_name" ]; then
-        _branch_name="$_branch_name # or another branch"
+        _branch_name="$_branch_name"
     else
         _branch_name="<branch>"
     fi
@@ -299,13 +298,27 @@ gitted_ensure_container_running() {
 
     if [ $state = MISSING ]; then
         # [ -d "$engine_dir" ] || nef_fatal "container cannot be created as engine dir is not available: $engine_dir"
-        nef_log "LXC container '$_name' does not exist. Creating..."
-        lxc-create -n $_name -t download -- -d debian -r wheezy -a amd64 >&2 \
+        type_uuid=$(git ls-tree $gitted_executive_treeish sysconf/type | awk '{ print $3 }')
+        local distrib=debian
+        local release=wheezy
+        local options=
+        if [ -n "$type_uuid" ]; then
+            local type=$(git cat-file -p $type_uuid | head -n 1)
+            distrib=$(echo $type | cut -d' ' -f1)
+            release=$(echo $type | cut -d' ' -f2)
+
+        fi
+        # if [ "$release" = "jessie" ]
+        #     # https://www.mail-archive.com/lxc-users@lists.linuxcontainers.org/msg01894.html
+        # fi
+
+        nef_log "LXC container '$_name' does not exist. Creating one with distrib '$distrib', release '$release'..."
+        lxc-create -n $_name -t download -- -d $distrib -r $release -a amd64 $options >&2 \
             || nef_fatal "lxc-create failed"
         state=STOPPED
 
         if [ $(id -u) -ne 0 ]; then
-            # fix hwaddr to avoid redundant 00:16:3e:ff:ff:ff
+            # fix hwaddr to avoid redundant 00:16:3e:ff:ff:ff (leading to IP conflict)
             # local a=$(printf "%x"
             local a=$((RANDOM % 256))
             local b=$((RANDOM % 256))
@@ -372,7 +385,26 @@ gitted_container_apply_customs() {
             -- sh -c 'mkdir -p /root/.ssh && cat >/root/.ssh/authorized_keys'
     fi
 
-    # TODO: set GIT config for user.name and user.email
+    # Set GIT config for user.name and user.email
+    local _git_user_name=$(git config --get user.name)
+    local _git_user_email=$(git config --get user.email)
+    if [ -n "$_git_user_name" -a -n "$_git_user_name" ]; then
+        nef_log "set container Git username to '$_git_user_name' and email to '$_git_user_email'"
+        cat <<EOF | lxc-attach --clear-env -n $_name -- sh -c "cat >>/root/.gitconfig"
+[user]
+	name = ${_git_user_name}
+	email = ${_git_user_email}
+EOF
+
+        # lxc-attach --clear-env -n $_name -- git config --global user.name "$_git_user_name"
+        # lxc-attach --clear-env -n $_name -- git config --global user.email "$_git_user_email"
+    fi
+}
+
+gitted_lxc_state() {
+    state=$(lxc-info -sHn $1 | head -n 1)
+    [ -z "$state" ] && state=MISSING
+    echo $state
 }
 
 gitted_lxc_state() {

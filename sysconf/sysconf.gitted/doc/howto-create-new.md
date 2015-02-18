@@ -82,7 +82,79 @@ lxc-destroy -f -n test-vm
   that need to run to setup the system, for example ```apt-get
   install``` commands, or generating config files
 
+* To run the system again:
+```
+sysconf/gitted-client register    # because sysconf has changed
+git push test-vm master
+```
+
 ## Update your README with how to run it
 
 * See the [Example README](example-of-readme.md) and update your own
   with the instructions on how to run the service.
+
+## Syncronizing Sysconf work with git push/pull
+
+_Software is data !_
+
+Sysconf, which represents the non-changing part of the machine (it's configuration, not data), is treated as if it were data.
+
+If you patch an ```apt-get```, ```/etc``` config  or anything, you want to work live inside the container. Gitted will export these changes into the Gitted repository, that you can use to patch other containers.
+
+(to work on Sysconf and save/propagate the changes without re-building the container)
+### Pull Sysconf from container to repository
+
+You can work on your live Sysconf inside the container (using _nano_ in a _lxc-attach_ shell, or through SSH), in ```/sysconf```. Then commit these files inside ```/sysconf```. On the next ```git fetch <container>```, it will be exported to the ```sysconf/``` git-subtree directory, thanks to [gitted/export/git-subtree](../tree/usr/share/gitted/export/git-subtree), controlled by
+[/etc/gitted/sync/master.sysconf.export](../tree/etc/gitted/sync/master.sysconf.export)
+
+### Push Sysconf from updates to existing repository
+
+This is like _patching_ a living machine with Sysconf updates instead of killing it and create a fresh one.
+It just works, thanks to  thanks to [gitted/export/git-subtree](../tree/usr/share/gitted/import/git-subtree), controlled by [/etc/gitted/sync/master.sysconf.export](../tree/etc/gitted/sync/master.sysconf.import)
+
+```git push <container> master``` will import the new ```sysconf```.
+
+### Share/update specific Sysconf profiles between Gitted repos
+
+A good practice with Sysconf is to use different sysconf profiles, that can easily be shared between different Gitted repositories.
+
+For example, [sysconf.gitted.redmine](https://github.com/geonef/sysconf.gitted.redmine) is the main profile for [gitted.redmine.demo](https://github.com/geonef/gitted.redmine.demo), where it is embedded as a subtree.
+
+Another example is [sysconf.gitted.tt-rss](https://github.com/geonef/sysconf.gitted.tt-rss) which also uses [sysconf.gitted.postgresql](https://github.com/geonef/sysconf.gitted.postgresql).
+
+#### Patch container B from A back and forth
+
+Here is how to take the specific ```sysconf.gitted.redmine``` profile out of ```<container-A>``` and merge it into ```<container-B>```:
+```
+git fetch <container-A>
+git checkout -b tmp <container-A>/master
+git subtree split -P sysconf/sysconf.gitted.redmine -b sysconf-redmine
+git fetch <container-B>
+git checkout -b tmp2 <container-B>/master
+git subtree merge -P sysconf/sysconf.gitted.redmine sysconf-redmine
+git push <container-B> tmp2:master
+```
+
+If ```<container-B>``` had changed as well, to integrate the merge back to ```<container-A>```:
+```
+git branch -d sysconf-redmine
+git subtree split -P sysconf/sysconf.gitted.redmine -b sysconf-redmine
+git checkout tmp
+git subtree merge -P sysconf/sysconf.gitted.redmine sysconf-redmine
+git push <container-A> tmp:master
+```
+
+#### Sync with GitHub
+
+Here in 4 commands, we :
+* pull updates from the container itself
+* pull remote updates from Github and merge them
+* update the container with the new commits from GitHub
+* push the merge back to GitHub
+
+```
+git pull <container> master
+git subtree pull -P sysconf/sysconf.gitted.redmine git@github.com:geonef/sysconf.gitted.redmine.git
+git push <container> master
+git subtree push -P sysconf/sysconf.gitted.redmine git@github.com:geonef/sysconf.gitted.redmine.git
+```

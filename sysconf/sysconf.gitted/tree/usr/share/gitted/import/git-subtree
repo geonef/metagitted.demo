@@ -55,6 +55,14 @@ if [ "$(git ls-tree $state_ref $GITTED_DATA_PATH 2>/dev/null)" \
         # [ "$fresh" = yes ] && _opts="--force"
         # git checkout $_opts $temp_branch || nef_fatal "git checkout failed"
         git reset --hard $temp_branch || nef_fatal "git reset failed"
+
+        # Fix file ownership if needed
+        dir_uid=$(stat -c %u .)
+        if [ "$(id -u)" -eq 0 -a $dir_uid -ne 0 ]; then
+            nef_log "fixing file ownership to UID $dir_uid on: $PWD"
+            chown -R $dir_uid:$dir_gid .
+        fi
+
         # if [ "$fresh" = yes ]; then
         #     git checkout --force $temp_branch || nef_fatal "git checkout failed"
         # else

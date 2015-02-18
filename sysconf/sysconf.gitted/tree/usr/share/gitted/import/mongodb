@@ -55,6 +55,8 @@ if [ "$state_tree" != "$(git ls-tree $gitted_new_commit $GITTED_DATA_PATH)" ]; t
     )
     nef_log "MongoDB import done."
     git update-ref -m "import MongoDB data from $gitted_new_commit" $state_ref $gitted_new_commit
+
+    $GITTED_MONGODB_HOOK_POST_IMPORT
 else
     nef_log "No change for path: $GITTED_DATA_PATH"
 fi

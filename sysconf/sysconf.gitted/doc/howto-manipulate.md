@@ -7,13 +7,14 @@ Useful links:
 A [Gitted](https://github.com/geonef/sysconf.gitted)-powered Git
 repository enables you to easily:
 
-* build the LXC container to run the service: for example, a MediaWiki
-  repository will build a fully configured MediaWiki server app.
+* build the LXC container to run the service: for example, a 
+  [MediaWiki repository](https://github.com/geonef/sysconf.gitted.mediawiki)
+  will build a fully configured MediaWiki server app.
   
 * fetch data updates of the service using ```git fetch```
 
 * edit application data as flat files: for example, MediaWiki pages
-  are stored as flat text files that you can edit with any text editor
+  could be stored as flat text files that you can edit with any text editor
 
 * using ```git push```, update the service with the modification you
   have made on the flat files and commited locally or pulled from
@@ -31,15 +32,15 @@ the logic from that perspective.
 
 A *Gitted-powered repository* is a normal Git repository (hosted on
 GitHub or not) that has a ```sysconf/``` directory and provides the
-```sysconf/gitted-client``` script along with
-[Sysconf](https://github.com/geonef/sysconf.base) profiles lying into
-```sysconf/``` .
+[```sysconf/gitted-client```](../tree/usr/bin/gitted-client) script
+along with [Sysconf](https://github.com/geonef/sysconf.base) profiles
+lying into ```sysconf/``` .
 
 As a user, you don't need to dive into *Sysconf*. Just remember that
 ```sysconf/``` is responsible for setting-up the LXC container
 that is going to be created/updated when you run ```git push```.
 
-But first, you need to **enable** Gitted on this repository by
+But first, you need to **enable** Gitted on this local repository by
 running:
 ```
 sysconf/gitted-client register
@@ -53,8 +54,12 @@ Then, register the *gitted-client* special remote:
 sysconf/gitted-client add container-name
 ```
 
-You may list the remote that has been created by doing a ```git remote
--v```.
+You may list the remote that has been created:
+```
+$ git remote -v
+container-name	ext::/home/toto/repo/.git/gitted-client handle-remote-protocol platform %S (fetch)
+container-name	ext::/home/toto/repo/.git/gitted-client handle-remote-protocol platform %S (push)
+```
 
 The repository is now set up. You may now create and destroy the
 service container the way you like.
@@ -126,7 +131,7 @@ learn how it is done, read:
 [How to setup Gitted for an application](doc/howto-create-new.md).
 
 As usual, the ```git fetch container-name``` command alone will not
-merge anything into your local branch, it only update the
+merge anything into your local branch, it only updates the
 *container-name* remote branches, likely ```container-name/master```.
 
 Now, since the state data is fetched, it is like having a backup. You
